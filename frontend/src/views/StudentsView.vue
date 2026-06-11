@@ -61,13 +61,15 @@
           <strong>{{ rechargeTarget.remaining_hours }}h</strong>
         </div>
         <form class="form" @submit.prevent="submitRecharge">
-          <label>充值课时数<input v-model.number="rechargeForm.hours" type="number" min="1" max="200" required /></label>
-          <label>备注（选填）<input v-model="rechargeForm.remark" placeholder="例如：续费20课时" /></label>
+          <label>充值课时数<input v-model.number="rechargeForm.hours" type="number" min="1" max="200" required :disabled="isRecharging" /></label>
+          <label>备注（选填）<input v-model="rechargeForm.remark" placeholder="例如：续费20课时" :disabled="isRecharging" /></label>
+          <p v-if="rechargeError" class="error-text">{{ rechargeError }}</p>
           <div class="modal-actions">
-            <button class="ghost" type="button" @click="closeRecharge">取消</button>
-            <button class="primary" type="submit">
-              <Wallet :size="16" />
-              确认充值
+            <button class="ghost" type="button" @click="closeRecharge" :disabled="isRecharging">取消</button>
+            <button class="primary" type="submit" :disabled="isRecharging">
+              <Loader2 v-if="isRecharging" :size="16" class="spin" />
+              <Wallet v-else :size="16" />
+              {{ isRecharging ? '处理中...' : '确认充值' }}
             </button>
           </div>
         </form>
@@ -137,7 +139,7 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { UserPlus, Wallet, History } from 'lucide-vue-next'
+import { UserPlus, Wallet, History, Loader2 } from 'lucide-vue-next'
 import { studentApi } from '../api/modules'
 import EmptyState from '../components/EmptyState.vue'
 
@@ -166,26 +168,49 @@ async function submit() {
 const showRecharge = ref(false)
 const rechargeTarget = ref({})
 const rechargeForm = reactive({ hours: 10, remark: '' })
+const isRecharging = ref(false)
+const rechargeError = ref('')
 
 function openRecharge(student) {
   rechargeTarget.value = { ...student }
   rechargeForm.hours = 10
   rechargeForm.remark = ''
+  rechargeError.value = ''
   showRecharge.value = true
 }
 
 function closeRecharge() {
+  if (isRecharging.value) return
   showRecharge.value = false
 }
 
 async function submitRecharge() {
-  await studentApi.recharge(rechargeTarget.value.id, {
-    hours: rechargeForm.hours,
-    remark: rechargeForm.remark || null,
-  })
-  showRecharge.value = false
-  emit('changed')
-  loadAllRecords()
+  if (isRecharging.value) return
+  isRecharging.value = true
+  rechargeError.value = ''
+  try {
+    const result = await studentApi.recharge(rechargeTarget.value.id, {
+      hours: rechargeForm.hours,
+      remark: rechargeForm.remark || null,
+    })
+    rechargeTarget.value.remaining_hours = result.remaining_after
+    showRecharge.value = false
+    emit('changed')
+    loadAllRecords()
+  } catch (err) {
+    let msg = '充值失败'
+    if (err.message) {
+      try {
+        const parsed = JSON.parse(err.message)
+        msg = parsed.detail || msg
+      } catch {
+        msg = err.message
+      }
+    }
+    rechargeError.value = msg
+  } finally {
+    isRecharging.value = false
+  }
 }
 
 const showHistory = ref(false)
@@ -283,5 +308,24 @@ watch(() => props.students, loadAllRecords, { immediate: true })
 .action-btns {
   display: flex;
   gap: 6px;
+}
+
+.error-text {
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>
