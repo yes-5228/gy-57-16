@@ -36,7 +36,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in students" :key="student.id" :class="{ 'row-flash': rechargedInfo[student.id] }">
+            <tr
+              v-for="student in students"
+              :key="student.id + '-' + (rechargedInfo[student.id]?.version || 0)"
+              :class="{ 'row-flash': rechargedInfo[student.id] }"
+            >
               <td>
                 <span class="student-name">{{ student.name }}</span>
                 <span v-if="rechargedInfo[student.id]" class="recharge-tag">刚充值</span>
@@ -44,7 +48,10 @@
               <td>{{ student.phone }}</td>
               <td>
                 <span class="hours-current">{{ student.remaining_hours }}h</span>
-                <span v-if="rechargedInfo[student.id]" class="hours-delta">+{{ rechargedInfo[student.id].hours }}</span>
+                <span v-if="rechargedInfo[student.id]" class="hours-delta">
+                  +{{ rechargedInfo[student.id].totalHours }}h
+                  <template v-if="rechargedInfo[student.id].count > 1">({{ rechargedInfo[student.id].count }}次)</template>
+                </span>
               </td>
               <td>
                 <div class="action-btns">
@@ -190,7 +197,13 @@ const rechargedInfo = reactive({})
 const rechargedTimers = {}
 
 function markRecharged(studentId, hours) {
-  rechargedInfo[studentId] = { hours }
+  if (rechargedInfo[studentId]) {
+    rechargedInfo[studentId].totalHours += hours
+    rechargedInfo[studentId].count += 1
+    rechargedInfo[studentId].version += 1
+  } else {
+    rechargedInfo[studentId] = { totalHours: hours, count: 1, version: 1 }
+  }
   if (rechargedTimers[studentId]) clearTimeout(rechargedTimers[studentId])
   rechargedTimers[studentId] = setTimeout(() => {
     delete rechargedInfo[studentId]
@@ -286,12 +299,8 @@ function closeHistory() {
 const allRecords = ref([])
 
 async function loadAllRecords() {
-  const results = await Promise.all(
-    props.students.map((s) => studentApi.getRecharges(s.id))
-  )
-  allRecords.value = results.flat().sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-  )
+  const list = await studentApi.getAllRecharges()
+  allRecords.value = list
 }
 
 function getStudentName(studentId) {

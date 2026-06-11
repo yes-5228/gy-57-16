@@ -10,6 +10,7 @@ export const studentApi = {
   create: (payload) => api.post('/students', payload),
   recharge: (id, payload) => api.post(`/students/${id}/recharge`, payload),
   getRecharges: (id) => api.get(`/students/${id}/recharges`),
+  getAllRecharges: () => api.get('/students/recharges'),
 }
 
 export const coachApi = {

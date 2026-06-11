@@ -8,6 +8,11 @@ from app.store import next_id, recharge_records, students
 router = APIRouter()
 
 
+@router.get("/recharges", response_model=list[RechargeRead])
+def list_all_recharges() -> list[RechargeRecord]:
+    return sorted(recharge_records.values(), key=lambda r: r.created_at, reverse=True)
+
+
 @router.get("", response_model=list[StudentRead])
 def list_students() -> list[Student]:
     return list(students.values())
