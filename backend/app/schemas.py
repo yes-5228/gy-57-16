@@ -11,8 +11,8 @@ class StudentCreate(BaseModel):
 
 
 class RechargeCreate(BaseModel):
-    hours: int = Field(gt=0, le=200)
-    remark: str | None = Field(default=None, max_length=200)
+    hours: int = Field(gt=0, le=200, json_schema_extra={"error": "课时数必须在 1-200 之间"})
+    remark: str | None = Field(default=None, max_length=200, json_schema_extra={"error": "备注不能超过 200 字"})
 
 
 class RechargeRead(BaseModel):

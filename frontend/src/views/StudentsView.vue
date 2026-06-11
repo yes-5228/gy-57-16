@@ -1,5 +1,10 @@
 <template>
   <section class="view">
+    <div v-if="successToast.show" class="toast toast-success">
+      <CheckCircle :size="18" />
+      <span>{{ successToast.message }}</span>
+    </div>
+
     <header class="view-header">
       <div>
         <p class="eyebrow">Student</p>
@@ -139,7 +144,7 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { UserPlus, Wallet, History, Loader2 } from 'lucide-vue-next'
+import { UserPlus, Wallet, History, Loader2, CheckCircle } from 'lucide-vue-next'
 import { studentApi } from '../api/modules'
 import EmptyState from '../components/EmptyState.vue'
 
@@ -170,6 +175,20 @@ const rechargeTarget = ref({})
 const rechargeForm = reactive({ hours: 10, remark: '' })
 const isRecharging = ref(false)
 const rechargeError = ref('')
+const successToast = reactive({
+  show: false,
+  message: '',
+})
+let toastTimer = null
+
+function showSuccessToast(message) {
+  if (toastTimer) clearTimeout(toastTimer)
+  successToast.message = message
+  successToast.show = true
+  toastTimer = setTimeout(() => {
+    successToast.show = false
+  }, 3000)
+}
 
 function openRecharge(student) {
   rechargeTarget.value = { ...student }
@@ -186,6 +205,14 @@ function closeRecharge() {
 
 async function submitRecharge() {
   if (isRecharging.value) return
+  if (!rechargeForm.hours || rechargeForm.hours <= 0) {
+    rechargeError.value = '请输入有效的课时数字，课时数必须在 1-200 之间'
+    return
+  }
+  if (rechargeForm.hours > 200) {
+    rechargeError.value = '课时数不能超过 200，请输入 1-200 之间的数字'
+    return
+  }
   isRecharging.value = true
   rechargeError.value = ''
   try {
@@ -197,14 +224,23 @@ async function submitRecharge() {
     showRecharge.value = false
     emit('changed')
     loadAllRecords()
+    showSuccessToast(`${rechargeTarget.value.name} 充值成功！+${result.hours} 课时，当前剩余 ${result.remaining_after} 课时`)
   } catch (err) {
-    let msg = '充值失败'
+    let msg = '充值失败，请稍后重试'
     if (err.message) {
       try {
         const parsed = JSON.parse(err.message)
-        msg = parsed.detail || msg
+        if (parsed.detail) {
+          msg = parsed.detail
+        }
       } catch {
-        msg = err.message
+        if (err.message.includes('404')) {
+          msg = '学员不存在，请刷新页面后重试'
+        } else if (err.message.includes('422')) {
+          msg = '参数错误，请检查输入内容'
+        } else {
+          msg = err.message
+        }
       }
     }
     rechargeError.value = msg
@@ -327,5 +363,37 @@ watch(() => props.students, loadAllRecords, { immediate: true })
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  animation: slideDown 0.3s ease;
+}
+
+.toast-success {
+  background: #0f766e;
+  color: #fff;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>
