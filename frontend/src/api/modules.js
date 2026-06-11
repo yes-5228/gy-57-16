@@ -8,6 +8,8 @@ export const dashboardApi = {
 export const studentApi = {
   list: () => api.get('/students'),
   create: (payload) => api.post('/students', payload),
+  recharge: (id, payload) => api.post(`/students/${id}/recharge`, payload),
+  getRecharges: (id) => api.get(`/students/${id}/recharges`),
 }
 
 export const coachApi = {

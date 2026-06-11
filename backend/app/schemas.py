@@ -10,6 +10,21 @@ class StudentCreate(BaseModel):
     remaining_hours: int = Field(default=20, ge=0, le=200)
 
 
+class RechargeCreate(BaseModel):
+    hours: int = Field(gt=0, le=200)
+    remark: str | None = Field(default=None, max_length=200)
+
+
+class RechargeRead(BaseModel):
+    id: int
+    student_id: int
+    hours: int
+    remaining_before: int
+    remaining_after: int
+    remark: str | None = None
+    created_at: datetime
+
+
 class StudentRead(StudentCreate):
     id: int
 

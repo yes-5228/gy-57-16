@@ -37,6 +37,16 @@ class Appointment(BaseModel):
     cancel_reason: str | None = None
 
 
+class RechargeRecord(BaseModel):
+    id: int
+    student_id: int
+    hours: int = Field(gt=0)
+    remaining_before: int = Field(ge=0)
+    remaining_after: int = Field(ge=0)
+    remark: str | None = None
+    created_at: datetime
+
+
 class CancelRule(BaseModel):
     min_hours_before_start: int = 2
     max_active_bookings_per_student: int = 3

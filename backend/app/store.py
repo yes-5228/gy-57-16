@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta
 
-from app.models import Appointment, AppointmentStatus, CancelRule, Coach, Student
+from app.models import Appointment, AppointmentStatus, CancelRule, Coach, RechargeRecord, Student
 
 
 students: dict[int, Student] = {}
 coaches: dict[int, Coach] = {}
 appointments: dict[int, Appointment] = {}
+recharge_records: dict[int, RechargeRecord] = {}
 cancel_rule = CancelRule()
 
-_ids = {"student": 0, "coach": 0, "appointment": 0}
+_ids = {"student": 0, "coach": 0, "appointment": 0, "recharge": 0}
 
 
 def next_id(kind: str) -> int:
