@@ -45,4 +45,5 @@ def recharge_student(student_id: int, payload: RechargeCreate) -> RechargeRecord
 def list_recharges(student_id: int) -> list[RechargeRecord]:
     if student_id not in students:
         raise HTTPException(status_code=404, detail="学员不存在")
-    return [r for r in recharge_records.values() if r.student_id == student_id]
+    records = [r for r in recharge_records.values() if r.student_id == student_id]
+    return sorted(records, key=lambda r: r.created_at, reverse=True)

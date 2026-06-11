@@ -36,10 +36,16 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in students" :key="student.id">
-              <td>{{ student.name }}</td>
+            <tr v-for="student in students" :key="student.id" :class="{ 'row-flash': rechargedInfo[student.id] }">
+              <td>
+                <span class="student-name">{{ student.name }}</span>
+                <span v-if="rechargedInfo[student.id]" class="recharge-tag">刚充值</span>
+              </td>
               <td>{{ student.phone }}</td>
-              <td>{{ student.remaining_hours }}h</td>
+              <td>
+                <span class="hours-current">{{ student.remaining_hours }}h</span>
+                <span v-if="rechargedInfo[student.id]" class="hours-delta">+{{ rechargedInfo[student.id].hours }}</span>
+              </td>
               <td>
                 <div class="action-btns">
                   <button class="ghost" @click="openRecharge(student)">
@@ -180,6 +186,16 @@ const successToast = reactive({
   message: '',
 })
 let toastTimer = null
+const rechargedInfo = reactive({})
+const rechargedTimers = {}
+
+function markRecharged(studentId, hours) {
+  rechargedInfo[studentId] = { hours }
+  if (rechargedTimers[studentId]) clearTimeout(rechargedTimers[studentId])
+  rechargedTimers[studentId] = setTimeout(() => {
+    delete rechargedInfo[studentId]
+  }, 8000)
+}
 
 function showSuccessToast(message) {
   if (toastTimer) clearTimeout(toastTimer)
@@ -224,6 +240,7 @@ async function submitRecharge() {
     showRecharge.value = false
     emit('changed')
     loadAllRecords()
+    markRecharged(rechargeTarget.value.id, result.hours)
     showSuccessToast(`${rechargeTarget.value.name} 充值成功！+${result.hours} 课时，当前剩余 ${result.remaining_after} 课时`)
   } catch (err) {
     let msg = '充值失败，请稍后重试'
@@ -255,7 +272,10 @@ const rechargeRecords = ref([])
 
 async function openHistory(student) {
   historyTarget.value = { ...student }
-  rechargeRecords.value = await studentApi.getRecharges(student.id)
+  const list = await studentApi.getRecharges(student.id)
+  rechargeRecords.value = list.sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  )
   showHistory.value = true
 }
 
@@ -394,6 +414,68 @@ watch(() => props.students, loadAllRecords, { immediate: true })
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+.row-flash {
+  background: linear-gradient(90deg, #d1fae5 0%, #ecfdf5 100%);
+  animation: rowFlash 1.4s ease;
+}
+
+@keyframes rowFlash {
+  0% {
+    background: linear-gradient(90deg, #6ee7b7 0%, #a7f3d0 100%);
+  }
+  40% {
+    background: linear-gradient(90deg, #d1fae5 0%, #ecfdf5 100%);
+  }
+  100% {
+    background: linear-gradient(90deg, #ecfdf5 0%, #ffffff 100%);
+  }
+}
+
+.student-name {
+  font-weight: 600;
+  color: #1f2933;
+}
+
+.recharge-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  vertical-align: middle;
+  letter-spacing: 0.3px;
+}
+
+.hours-current {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.hours-delta {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 4px;
+  animation: pulse 1.2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
   }
 }
 </style>
